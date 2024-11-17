@@ -1,0 +1,6 @@
+.env
+
+/target
+/data
+.vscode
+.DS_Store
