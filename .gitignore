@@ -1,5 +1,7 @@
 .env
 
+pro.json
+
 /target
 /data
 .vscode

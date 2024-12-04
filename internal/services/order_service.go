@@ -89,6 +89,7 @@ func CreateOrderService(order *models.Order) error {
 	order.OrderCount = orderCount
 	order.CreatedAt = time.Now()
 	order.OrderDate = time.Now()
+	order.TotalPrice = CalculateOrderPriceService(order)
 	order.OrderStatus = models.Received
 
 	collection := db.GetCollection(models.GetCollection{DBName: "order", Collection: "history"})
@@ -102,6 +103,16 @@ func CreateOrderService(order *models.Order) error {
 
 	order.ID = result.InsertedID.(primitive.ObjectID)
 	return nil
+}
+
+func CalculateOrderPriceService(order *models.Order) float64 {
+	var totalPrice float64
+
+	for _, item := range order.Items {
+		totalPrice += item.Price * float64(item.Quantity)
+	}
+
+	return totalPrice
 }
 
 func CreateOrderCountService(generateOrderID models.UserOrder) (int, error) {

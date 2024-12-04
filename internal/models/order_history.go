@@ -16,10 +16,17 @@ type Order struct {
 	OrderDate   time.Time   `bson:"OrderDate" json:"order_date"`
 	CreatedAt   time.Time   `bson:"CreatedAt" json:"created_at"`
 	Items       []OrderItem `bson:"Items" json:"items"`
+	TotalPrice  float64     `bson:"TotalPrice" json:"total_price"`
 	OrderStatus OrderStatus `bson:"OrderStatus" json:"order_status"`
 }
 
 type OrderItem struct {
-	MenuID   int     `bson:"MenuID" json:"menu_id"`
-	Quantity float64 `bson:"Quantity" json:"quantity"`
+	MenuID     int     `bson:"MenuID" json:"menu_id"`
+	MenuNameTH string  `bson:"MenuNameTH" json:"menu_name_th"`
+	MenuNameEN string  `bson:"MenuNameEN" json:"menu_name_en"`
+	Price      float64 `bson:"Price" json:"price"`
+	Category   int     `bson:"Category" json:"category"`
+	Status     int     `bson:"Status" json:"status"`
+	Image      string  `bson:"Image" json:"image"`
+	Quantity   float64 `bson:"Quantity" json:"quantity"`
 }
