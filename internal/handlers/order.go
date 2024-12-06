@@ -105,6 +105,22 @@ func GetOrders(w http.ResponseWriter, r *http.Request) {
 	utils.JSONResponse(w, "success", orders, http.StatusCreated)
 }
 
+func KitchenDoneOrder(w http.ResponseWriter, r *http.Request) {
+	var kitchenDoneOrder body.GetOrders
+	if err := json.NewDecoder(r.Body).Decode(&kitchenDoneOrder); err != nil {
+		utils.JSONResponse(w, "fail", "Invalid input", http.StatusBadRequest)
+		return
+	}
+
+	orders, err := services.KitchenDoneOrderService(kitchenDoneOrder)
+	if err != nil {
+		utils.JSONResponse(w, "fail", "Failed to get orders", http.StatusInternalServerError)
+		return
+	}
+
+	utils.JSONResponse(w, "success", orders, http.StatusCreated)
+}
+
 func ClearAllOrder(w http.ResponseWriter, r *http.Request) {
 	err := services.ClearAllOrderService()
 	if err != nil {

@@ -90,7 +90,7 @@ func CreateOrderService(order *models.Order) error {
 	order.CreatedAt = time.Now()
 	order.OrderDate = time.Now()
 	order.TotalPrice = CalculateOrderPriceService(order)
-	order.OrderStatus = models.Received
+	order.OrderStatus = models.Preparing
 
 	collection := db.GetCollection(models.GetCollection{DBName: "order", Collection: "history"})
 	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
@@ -163,10 +163,9 @@ func CreateOrderCountService(generateOrderID models.UserOrder) (int, error) {
 }
 
 func GetOrdersService(getOrders body.GetOrders) ([]models.Order, error) {
-	collection :=
-		db.GetCollection(models.GetCollection{DBName: "order", Collection: "history"})
+	collection := db.GetCollection(models.GetCollection{DBName: "order", Collection: "history"})
 
-	ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
+	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
 	defer cancel()
 
 	filter := bson.M{}
@@ -191,8 +190,54 @@ func GetOrdersService(getOrders body.GetOrders) ([]models.Order, error) {
 			"$lt":  getOrders.OrderDate.Truncate(24 * time.Hour).Add(24 * time.Hour),
 		}
 	}
+	if getOrders.OrderStatus != 0 {
+		filter["OrderStatus"] = getOrders.OrderStatus
+	}
 
-	cursor, err := collection.Find(ctx, filter, options.Find().SetSort(bson.M{"OrderDate": -1}))
+	// Filter the latest TableVisit for each TableID
+	pipeline := []bson.M{
+		// Match the filter criteria
+		{"$match": filter},
+		// Identify the latest TableVisit for each TableID
+		{
+			"$group": bson.M{
+				"_id":         "$TableID",
+				"latestVisit": bson.M{"$max": "$TableVisit"}, // Find the latest TableVisit
+			},
+		},
+		// Join back with the original collection to get all documents for the latest TableVisit
+		{
+			"$lookup": bson.M{
+				"from": "history",
+				"let":  bson.M{"tableID": "$_id", "latestVisit": "$latestVisit"},
+				"pipeline": []bson.M{
+					{"$match": bson.M{
+						"$expr": bson.M{
+							"$and": []bson.M{
+								{"$eq": []interface{}{"$TableID", "$$tableID"}},
+								{"$eq": []interface{}{"$TableVisit", "$$latestVisit"}},
+							},
+						},
+					}},
+				},
+				"as": "orders",
+			},
+		},
+		// Unwind to return individual orders instead of grouped arrays
+		{"$unwind": "$orders"},
+		// Replace the root to show the actual order document
+		{"$replaceRoot": bson.M{"newRoot": "$orders"}},
+	}
+
+	if getOrders.OrderStatus != 0 {
+		pipeline = append(pipeline, bson.M{
+			"$match": bson.M{
+				"OrderStatus": getOrders.OrderStatus,
+			},
+		})
+	}
+
+	cursor, err := collection.Aggregate(ctx, pipeline)
 	if err != nil {
 		return nil, err
 	}
@@ -204,6 +249,35 @@ func GetOrdersService(getOrders body.GetOrders) ([]models.Order, error) {
 	}
 
 	return orders, nil
+}
+
+func KitchenDoneOrderService(getOrders body.GetOrders) (models.Order, error) {
+	collection := db.GetCollection(models.GetCollection{DBName: "order", Collection: "history"})
+
+	ctx, cancel := context.WithTimeout(context.Background(), 3*time.Second)
+	defer cancel()
+
+	orderID, err := primitive.ObjectIDFromHex(getOrders.ID.Hex())
+	if err != nil {
+		return models.Order{}, fmt.Errorf("invalid order ID: %w", err)
+	}
+	update := bson.M{
+		"$set": bson.M{
+			"OrderStatus": models.Ready,
+		},
+	}
+
+	result := collection.FindOneAndUpdate(ctx, bson.M{"_id": orderID}, update, options.FindOneAndUpdate().SetReturnDocument(options.After))
+	if result.Err() != nil {
+		return models.Order{}, fmt.Errorf("failed to update order status: %w", result.Err())
+	}
+
+	var updatedOrder models.Order
+	if err := result.Decode(&updatedOrder); err != nil {
+		return models.Order{}, fmt.Errorf("failed to decode updated order: %w", err)
+	}
+
+	return updatedOrder, nil
 }
 
 func ClearAllOrderService() error {

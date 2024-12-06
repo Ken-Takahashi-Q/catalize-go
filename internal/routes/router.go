@@ -15,6 +15,7 @@ func SetupRouter() *mux.Router {
 
 	router.HandleFunc("/order/create_order", handlers.CreateOrder).Methods("POST")
 	router.HandleFunc("/order/get_orders", handlers.GetOrders).Methods("POST")
+	router.HandleFunc("/order/kitchen_done_order", handlers.KitchenDoneOrder).Methods("POST")
 
 	router.HandleFunc("/order/clear_all_order", handlers.ClearAllOrder).Methods("DELETE")
 	return router
