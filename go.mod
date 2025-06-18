@@ -7,7 +7,7 @@ require (
 	go.mongodb.org/mongo-driver v1.17.1
 )
 
-require github.com/rs/cors v1.11.1 // indirect
+require github.com/rs/cors v1.11.1
 
 require (
 	github.com/golang/snappy v0.0.4 // indirect

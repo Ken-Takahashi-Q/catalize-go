@@ -10,6 +10,7 @@ func SetupRouter() *mux.Router {
 	router := mux.NewRouter()
 	router.HandleFunc("/menu", handlers.GetMenu).Methods("GET")
 	router.HandleFunc("/category", handlers.GetMenuCategory).Methods("GET")
+	router.HandleFunc("/order/get_tables", handlers.GetTables).Methods("GET")
 	router.HandleFunc("/order/create_table_visit", handlers.CreateTableVisit).Methods("GET")
 	router.HandleFunc("/order/get_table_visit", handlers.GetTableVisit).Methods("GET")
 
